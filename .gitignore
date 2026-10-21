@@ -1,0 +1,4 @@
+.build/
+awaker.app/
+.swiftpm/
+.DS_Store
