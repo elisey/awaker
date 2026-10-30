@@ -36,6 +36,20 @@ final class AwakeView: NSView {
     static let focusWidth: CGFloat = 2
     /// Room around the circle for the hover growth and the focus ring.
     static let margin: CGFloat = 8
+    /// Steam rises by this many grid units and falls back, one column after another.
+    static let steamRise: CGFloat = 4
+    static let steamCycle: TimeInterval = 1.6
+    static let steamPhaseStep: TimeInterval = 0.2
+    static let steamFrameRate: Double = 30
+
+    /// Lift of each steam column, in grid units, `time` seconds into the animation:
+    /// a sine from 0 up to `steamRise` and back, each column `steamPhaseStep` behind the previous.
+    static func steamLift(at time: TimeInterval, columns: Int) -> [CGFloat] {
+        (0..<columns).map { index in
+            let t = time - Double(index) * steamPhaseStep
+            return steamRise * CGFloat(1 - cos(2 * .pi * t / steamCycle)) / 2
+        }
+    }
 
     /// The view's frame in the popover: the circle at its design place plus the margin.
     static var popoverFrame: NSRect {
@@ -49,10 +63,15 @@ final class AwakeView: NSView {
         didSet {
             guard status != oldValue else { return }
             needsDisplay = true
+            updateSteamTimer()
             NSAccessibility.post(element: self, notification: .valueChanged)
         }
     }
     var onToggle: (() -> Void)?
+    /// Set while the popover is shown: the steam only moves when someone can see it.
+    var animatesSteam = false {
+        didSet { if animatesSteam != oldValue { updateSteamTimer() } }
+    }
 
     private var hovering = false
     private var pressed = false
@@ -63,6 +82,8 @@ final class AwakeView: NSView {
     private var scaleTo: CGFloat = 1
     private var scaleStart = Date.distantPast
     private var scaleTimer: Timer?
+    private var steamStart = Date()
+    private var steamTimer: Timer?
 
     override var isFlipped: Bool { true }
 
@@ -87,7 +108,8 @@ final class AwakeView: NSView {
                              width: markHeight, height: markHeight)
         let display = PopoverDisplay.make(status)
         if awake {
-            drawMark(in: markBox, variant: display.mark, body: Theme.onButton, steam: Theme.steamOnButton)
+            drawMark(in: markBox, variant: display.mark, body: Theme.onButton, steam: Theme.steamOnButton,
+                     steamLift: currentSteamLift)
         } else {
             drawMark(in: markBox, variant: display.mark, body: Theme.ink, steam: Theme.ink)
         }
@@ -108,6 +130,30 @@ final class AwakeView: NSView {
         case (false, true): Theme.hairline
         case (true, false): Theme.button
         case (true, true): Theme.button.blended(withFraction: 0.1, of: .black) ?? Theme.button
+        }
+    }
+
+    // MARK: Steam animation
+
+    private var currentSteamLift: [CGFloat] {
+        guard steamTimer != nil else { return [] }
+        let columns = Mark.steamColumns(status.mark).count
+        return Self.steamLift(at: Date().timeIntervalSince(steamStart), columns: columns)
+    }
+
+    private func updateSteamTimer() {
+        let animate = animatesSteam && awake && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        if animate, steamTimer == nil {
+            steamStart = Date()
+            let timer = Timer(timeInterval: 1 / Self.steamFrameRate, repeats: true) { [weak self] _ in
+                self?.needsDisplay = true
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            steamTimer = timer
+        } else if !animate, let timer = steamTimer {
+            timer.invalidate()
+            steamTimer = nil
+            needsDisplay = true
         }
     }
 

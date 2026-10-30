@@ -1,6 +1,6 @@
 import AppKit
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private let keeper = Keeper()
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
@@ -62,6 +62,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController = controller
         popover.contentSize = NSSize(width: w, height: h)
         popover.behavior = .transient
+        popover.delegate = self
+    }
+
+    func popoverDidShow(_ notification: Notification) {
+        awakeView.animatesSteam = true
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        awakeView.animatesSteam = false
     }
 
     /// The container is not flipped; layout values are measured from the top, as in the design.

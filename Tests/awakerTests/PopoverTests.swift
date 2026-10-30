@@ -91,3 +91,31 @@ private let fontURL = URL(fileURLWithPath: #filePath)
         #expect(toggles == 1)
     }
 }
+
+struct SteamAnimationTests {
+    @Test func steamRestsAtTheStartOfACycle() {
+        #expect(AwakeView.steamLift(at: 0, columns: 1) == [0])
+        let lift = AwakeView.steamLift(at: AwakeView.steamCycle, columns: 1)[0]
+        #expect(abs(lift) < 0.0001)
+    }
+
+    @Test func steamPeaksHalfwayAtFourGridUnits() {
+        let lift = AwakeView.steamLift(at: AwakeView.steamCycle / 2, columns: 1)[0]
+        #expect(abs(lift - 4) < 0.0001)
+        for step in 0...32 {
+            let value = AwakeView.steamLift(at: Double(step) * 0.05, columns: 1)[0]
+            #expect(value >= 0 && value <= 4.0001)
+        }
+    }
+
+    @Test func columnsFollowEachOtherByAFifthOfASecond() {
+        let time = 0.7
+        let lifts = AwakeView.steamLift(at: time, columns: 3)
+        #expect(lifts.count == 3)
+        for index in 1..<3 {
+            let alone = AwakeView.steamLift(at: time - 0.2 * Double(index), columns: 1)[0]
+            #expect(abs(lifts[index] - alone) < 0.0001)
+        }
+        #expect(lifts[0] != lifts[1])
+    }
+}
