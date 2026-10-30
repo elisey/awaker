@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var shownStatus: AwakeStatus?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Theme.registerFonts()
         // The three status glyphs differ in width; a variable-length item would shift
         // on every state change and drag the anchored popover along with it.
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)

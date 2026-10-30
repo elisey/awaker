@@ -1,0 +1,171 @@
+import AppKit
+import CoreText
+
+/// Colors, metrics and type styles of the interface; values come from docs/redesign/tokens.json.
+enum Theme {
+    // MARK: Colors
+
+    static let paper = dynamic("paper", light: 0xF1EADF, dark: 0x121212)
+    static let paperDeep = dynamic("paperDeep", light: 0xE6DCCC, dark: 0x1F1E1C)
+    static let hairline = dynamic("hairline", light: 0xD6CAB7, dark: 0x34322F)
+    static let ink = dynamic("ink", light: 0x121212, dark: 0xF1EADF)
+    static let inkMuted = dynamic("inkMuted", light: 0x5E574D, dark: 0xB5AC9E)
+    static let inkFaint = dynamic("inkFaint", light: 0x857D71, dark: 0x7F786C)
+    static let onInk = paper
+    static let ultra = rgb(0x2E4BFF)
+    static let button = ultra
+    static let cream = rgb(0xF1EADF)
+    static let onButton = cream
+    static let yolk = rgb(0xFFC21A)
+    static let steamOnButton = yolk
+    static let coal = rgb(0x121212)
+
+    static func isDark(_ appearance: NSAppearance) -> Bool {
+        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+    }
+
+    static func rgb(_ value: UInt32) -> NSColor {
+        NSColor(
+            srgbRed: CGFloat((value >> 16) & 0xFF) / 255,
+            green: CGFloat((value >> 8) & 0xFF) / 255,
+            blue: CGFloat(value & 0xFF) / 255,
+            alpha: 1
+        )
+    }
+
+    private static func dynamic(_ name: String, light: UInt32, dark: UInt32) -> NSColor {
+        let lightColor = rgb(light), darkColor = rgb(dark)
+        return NSColor(name: NSColor.Name(name)) { appearance in
+            isDark(appearance) ? darkColor : lightColor
+        }
+    }
+
+    // MARK: Metrics
+
+    /// Final sizes in points, exactly as in the design system; nothing is scaled.
+    enum Metrics {
+        static let popoverWidth: CGFloat = 208
+        static let popoverHeight: CGFloat = 208
+        static let buttonSize: CGFloat = 88
+        static let buttonTop: CGFloat = 22
+        /// Height of the mark's optical frame inside the button.
+        static let buttonMark: CGFloat = 58
+        static let stateTop: CGFloat = 124
+        static let stateLineHeight: CGFloat = 36
+        static let pillTop: CGFloat = 170
+        static let pillHeight: CGFloat = 24
+        static let pillPadding: CGFloat = 12
+        static let pillMaxWidth: CGFloat = 160
+        static let iconButton: CGFloat = 24
+        static let iconInset: CGFloat = 12
+        static let iconRadius: CGFloat = 8
+        static let menubarIcon: CGFloat = 18
+        static let disabledOpacity: CGFloat = 0.4
+    }
+
+    // MARK: Fonts
+
+    static let fontFamily = "Archivo"
+    /// Set once the bundled Archivo has been registered; until then fonts fall back to the system font.
+    private(set) static var fontAvailable = false
+
+    /// Registers the bundled Archivo for this process. Returns false (and logs) if it can't be loaded.
+    @discardableResult
+    static func registerFonts(
+        url: URL? = Bundle.main.url(forResource: "Archivo", withExtension: "ttf", subdirectory: "Fonts")
+    ) -> Bool {
+        guard let url else {
+            NSLog("awaker: Archivo.ttf is not in the bundle, using the system font")
+            return false
+        }
+        var error: Unmanaged<CFError>?
+        if !CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error) {
+            let cfError = error?.takeRetainedValue()
+            let alreadyRegistered = cfError.map {
+                CFErrorGetCode($0) == CTFontManagerError.alreadyRegistered.rawValue
+            } ?? false
+            if !alreadyRegistered {
+                NSLog("awaker: failed to register %@: %@", url.path, cfError.map { "\($0)" } ?? "unknown error")
+                return false
+            }
+        }
+        fontAvailable = true
+        return true
+    }
+
+    private static let widthAxis = 0x7764_7468  // 'wdth'
+    private static let weightAxis = 0x7767_6874  // 'wght'
+
+    /// Archivo at an arbitrary point of its width (62–125) and weight (100–900) axes.
+    static func font(size: CGFloat, weight: CGFloat, width: CGFloat = 125, tabular: Bool = false) -> NSFont {
+        guard fontAvailable else { return fallbackFont(size: size, weight: weight, tabular: tabular) }
+        var attributes: [CFString: Any] = [
+            kCTFontFamilyNameAttribute: fontFamily,
+            kCTFontVariationAttribute: [widthAxis: width, weightAxis: weight] as [Int: CGFloat],
+        ]
+        if tabular {
+            attributes[kCTFontFeatureSettingsAttribute] = [[
+                kCTFontFeatureTypeIdentifierKey: kNumberSpacingType,
+                kCTFontFeatureSelectorIdentifierKey: kMonospacedNumbersSelector,
+            ]]
+        }
+        let descriptor = CTFontDescriptorCreateWithAttributes(attributes as CFDictionary)
+        let font = CTFontCreateWithFontDescriptor(descriptor, size, nil)
+        guard CTFontCopyFamilyName(font) as String == fontFamily else {
+            return fallbackFont(size: size, weight: weight, tabular: tabular)
+        }
+        return font as NSFont
+    }
+
+    private static func fallbackFont(size: CGFloat, weight: CGFloat, tabular: Bool) -> NSFont {
+        let systemWeight = systemWeight(weight)
+        return tabular
+            ? .monospacedDigitSystemFont(ofSize: size, weight: systemWeight)
+            : .systemFont(ofSize: size, weight: systemWeight)
+    }
+
+    /// Maps a CSS-style weight (100–900) to the nearest system font weight.
+    static func systemWeight(_ weight: CGFloat) -> NSFont.Weight {
+        let weights: [NSFont.Weight] = [.ultraLight, .thin, .light, .regular, .medium, .semibold, .bold, .heavy, .black]
+        let index = Int((weight / 100).rounded()) - 1
+        return weights[min(max(index, 0), weights.count - 1)]
+    }
+
+    // MARK: Text styles
+
+    struct TextStyle {
+        let size: CGFloat
+        let weight: CGFloat
+        var width: CGFloat = 125
+        /// Letter spacing in em.
+        var tracking: CGFloat = 0
+        var uppercase = false
+        var tabular = false
+
+        var font: NSFont {
+            Theme.font(size: size, weight: weight, width: width, tabular: tabular)
+        }
+
+        func attributes(color: NSColor) -> [NSAttributedString.Key: Any] {
+            [.font: font, .foregroundColor: color, .kern: tracking * size]
+        }
+
+        func string(_ text: String, color: NSColor) -> NSAttributedString {
+            let result = NSMutableAttributedString(
+                string: uppercase ? text.uppercased() : text,
+                attributes: attributes(color: color)
+            )
+            // Tracking goes between letters; after the last one it would only shift the centering.
+            if let last = result.string.indices.last {
+                let range = NSRange(last..<result.string.endIndex, in: result.string)
+                result.removeAttribute(.kern, range: range)
+            }
+            return result
+        }
+    }
+
+    /// `awake` / `sleepy`, lowercase.
+    static let state = TextStyle(size: 36, weight: 900, tracking: -0.05)
+    static let pill = TextStyle(size: 11, weight: 900, tracking: 0.04, uppercase: true)
+    static let label = TextStyle(size: 13, weight: 700)
+}

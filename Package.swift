@@ -11,6 +11,12 @@ let package = Package(
             // Everything runs on the main thread via AppKit; the strict-concurrency checker
             // of mode 6 cannot see that for NSObject subclasses and only adds noise.
             swiftSettings: [.swiftLanguageMode(.v5)]
-        )
+        ),
+        .testTarget(
+            name: "awakerTests",
+            dependencies: ["awaker"],
+            path: "Tests/awakerTests",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
     ]
 )

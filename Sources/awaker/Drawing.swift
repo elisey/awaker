@@ -1,5 +1,15 @@
 import AppKit
 
+func hex(from color: NSColor) -> String {
+    let c = color.usingColorSpace(.sRGB) ?? color
+    return String(
+        format: "#%02X%02X%02X",
+        Int((c.redComponent * 255).rounded()),
+        Int((c.greenComponent * 255).rounded()),
+        Int((c.blueComponent * 255).rounded())
+    )
+}
+
 func drawCentered(_ text: String, in rect: NSRect, font: NSFont, color: NSColor) {
     let style = NSMutableParagraphStyle()
     style.alignment = .center
