@@ -41,5 +41,5 @@ clean:
 # Regenerates Support/awaker.icns from the drawing code; only needed after editing make-icon.swift.
 icon:
 	rm -rf .build/awaker.iconset
-	swift Support/make-icon.swift icns cup .build/awaker.iconset
+	swift Support/make-icon.swift icns ultra .build/awaker.iconset
 	iconutil -c icns .build/awaker.iconset -o Support/awaker.icns
