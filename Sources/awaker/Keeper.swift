@@ -2,15 +2,6 @@ import Foundation
 
 enum AwakeStatus {
     case asleep, awake, awakeDisplay
-
-    /// SF Symbol shared by the status item and the round button so both tell the same story.
-    var symbol: String {
-        switch self {
-        case .asleep: "cup.and.saucer"
-        case .awake: "cup.and.heat.waves.fill"
-        case .awakeDisplay: "mug.fill"
-        }
-    }
 }
 
 /// One caffeinate process per "awake" session; its lifetime is the assertion.

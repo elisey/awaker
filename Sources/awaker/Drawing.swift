@@ -17,6 +17,17 @@ enum MarkVariant: Equatable {
     case outline, steam2, steam3
 }
 
+extension AwakeStatus {
+    /// The mark shared by the menu bar and the round button so both tell the same story.
+    var mark: MarkVariant {
+        switch self {
+        case .asleep: .outline
+        case .awake: .steam2
+        case .awakeDisplay: .steam3
+        }
+    }
+}
+
 /// The mark's geometry on its 120 grid (y down), see docs/redesign/assets/awaker-mark.svg.
 enum Mark {
     /// The mark is centered on this point, not on its bounding box: the body's weight
@@ -196,30 +207,4 @@ func drawPill(_ text: String, look: PillLook, top: CGFloat, in rect: NSRect) {
         NSBezierPath(roundedRect: frame, xRadius: height / 2, yRadius: height / 2).fill()
     }
     drawCentered(label, top: top, lineHeight: height, in: frame)
-}
-
-// MARK: SF Symbols
-
-func symbolImage(_ name: String, pointSize: CGFloat? = nil) -> NSImage? {
-    guard var image = NSImage(systemSymbolName: name, accessibilityDescription: nil) else { return nil }
-    if let pointSize {
-        let config = NSImage.SymbolConfiguration(pointSize: pointSize, weight: .medium)
-        image = image.withSymbolConfiguration(config) ?? image
-    }
-    image.isTemplate = true
-    return image
-}
-
-/// Symbols come in different heights; the menu bar item would resize with them and
-/// the popover anchored to it would jump, so every icon is padded to the same canvas.
-func statusImage(_ name: String) -> NSImage? {
-    let canvas: CGFloat = 18
-    guard let symbol = symbolImage(name, pointSize: 14) else { return nil }
-    let image = NSImage(size: NSSize(width: canvas, height: canvas), flipped: false) { _ in
-        let s = symbol.size
-        symbol.draw(in: NSRect(x: (canvas - s.width) / 2, y: (canvas - s.height) / 2, width: s.width, height: s.height))
-        return true
-    }
-    image.isTemplate = true
-    return image
 }

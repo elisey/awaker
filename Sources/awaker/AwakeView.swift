@@ -15,13 +15,13 @@ struct PopoverDisplay: Equatable {
     static func make(_ status: AwakeStatus) -> PopoverDisplay {
         switch status {
         case .asleep:
-            PopoverDisplay(mark: .outline, word: "sleepy", wordTone: .faint,
+            PopoverDisplay(mark: status.mark, word: "sleepy", wordTone: .faint,
                            pill: "click the cup", pillLook: .outline, displayButton: .disabled)
         case .awake:
-            PopoverDisplay(mark: .steam2, word: "awake", wordTone: .ink,
+            PopoverDisplay(mark: status.mark, word: "awake", wordTone: .ink,
                            pill: "screen may dim", pillLook: .ink, displayButton: .off)
         case .awakeDisplay:
-            PopoverDisplay(mark: .steam3, word: "awake", wordTone: .ink,
+            PopoverDisplay(mark: status.mark, word: "awake", wordTone: .ink,
                            pill: "screen on", pillLook: .yolk, displayButton: .on)
         }
     }

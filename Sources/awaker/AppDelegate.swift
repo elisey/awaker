@@ -13,8 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Theme.registerFonts()
-        // The three status glyphs differ in width; a variable-length item would shift
-        // on every state change and drag the anchored popover along with it.
+        // A fixed-width item keeps the anchored popover from moving when the icon changes.
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             button.target = self
@@ -116,6 +115,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setIcon(_ status: AwakeStatus) {
         guard iconStatus != status else { return }
         iconStatus = status
-        statusItem.button?.image = statusImage(status.symbol)
+        statusItem.button?.image = MenuBarIcon.image(for: status)
     }
 }
