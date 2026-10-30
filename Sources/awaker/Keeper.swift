@@ -71,10 +71,4 @@ final class Keeper {
         guard awake else { return .asleep }
         return displayLock ? .awakeDisplay : .awake
     }
-
-    /// Sub is empty while asleep because the display flag has no effect then.
-    var labels: (main: String, sub: String) {
-        guard awake else { return ("Sleeping as usual", "") }
-        return ("Staying awake", displayLock ? "display stays on" : "display may turn off")
-    }
 }

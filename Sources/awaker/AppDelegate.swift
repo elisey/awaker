@@ -1,15 +1,12 @@
 import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    static let popoverWidth: CGFloat = 150
-    static let popoverHeight: CGFloat = 146
-    static let lockSize: CGFloat = 22
-
     private let keeper = Keeper()
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var awakeView: AwakeView!
-    private var lockButton: NSButton!
+    private var statusView: StatusView!
+    private var displayButton: IconButton!
     private var tickTimer: Timer?
     private var iconStatus: AwakeStatus?
     private var shownStatus: AwakeStatus?
@@ -36,23 +33,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func buildPopover() {
-        let w = Self.popoverWidth, h = Self.popoverHeight
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: w, height: h))
+        typealias M = Theme.Metrics
+        let w = M.popoverWidth, h = M.popoverHeight
+        let container = PopoverContentView(frame: NSRect(x: 0, y: 0, width: w, height: h))
 
-        awakeView = AwakeView(frame: NSRect(x: 0, y: 0, width: w, height: h), keeper: keeper)
+        statusView = StatusView(frame: container.bounds)
+        container.addSubview(statusView)
+
+        awakeView = AwakeView(frame: flipped(AwakeView.popoverFrame, in: h))
         awakeView.onToggle = { [weak self] in self?.toggleAwake() }
         container.addSubview(awakeView)
 
-        lockButton = NSButton(image: NSImage(), target: self, action: #selector(toggleLock(_:)))
-        lockButton.isBordered = false
-        lockButton.frame = NSRect(x: w - Self.lockSize - 6, y: 6, width: Self.lockSize, height: Self.lockSize)
-        lockButton.toolTip = "Keep the display on"
-        container.addSubview(lockButton)
-
-        let quit = NSButton(image: symbolImage("xmark")!, target: self, action: #selector(quit(_:)))
-        quit.isBordered = false
-        quit.frame = NSRect(x: 6, y: h - 28, width: 22, height: 22)
+        let quit = IconButton(glyph: .close, label: "Quit awaker", target: self, action: #selector(quit(_:)))
+        quit.frame = flipped(NSRect(x: M.iconInset, y: M.iconInset, width: M.iconButton, height: M.iconButton), in: h)
         container.addSubview(quit)
+
+        displayButton = IconButton(glyph: .display, label: "Keep the display on",
+                                   target: self, action: #selector(toggleDisplay(_:)))
+        displayButton.toolTip = "Keep the display on"
+        displayButton.frame = flipped(
+            NSRect(x: w - M.iconInset - M.iconButton, y: M.iconInset, width: M.iconButton, height: M.iconButton),
+            in: h
+        )
+        container.addSubview(displayButton)
 
         let controller = NSViewController()
         controller.view = container
@@ -60,6 +63,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController = controller
         popover.contentSize = NSSize(width: w, height: h)
         popover.behavior = .transient
+    }
+
+    /// The container is not flipped; layout values are measured from the top, as in the design.
+    private func flipped(_ rect: NSRect, in height: CGFloat) -> NSRect {
+        NSRect(x: rect.minX, y: height - rect.maxY, width: rect.width, height: rect.height)
     }
 
     @objc private func togglePopover(_ sender: Any?) {
@@ -71,6 +79,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         // An accessory app isn't frontmost, so make the popover key to receive clicks.
         NSApp.activate()
+        // Nothing is focused until Tab is pressed; otherwise the button opens with a focus ring.
+        popover.contentViewController?.view.window?.makeFirstResponder(nil)
     }
 
     private func toggleAwake() {
@@ -78,7 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refresh()
     }
 
-    @objc private func toggleLock(_ sender: Any?) {
+    @objc private func toggleDisplay(_ sender: Any?) {
         keeper.setDisplayLock(!keeper.displayLock)
         refresh()
     }
@@ -93,13 +103,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refresh() {
-        shownStatus = keeper.status
-        setIcon(keeper.status)
-        awakeView.refresh()
-        let locked = keeper.displayLock
-        lockButton.image = symbolImage(locked ? "lock.display" : "lock.open.display", pointSize: 13)
-        lockButton.isEnabled = keeper.awake
-        lockButton.contentTintColor = locked ? .systemBlue : .secondaryLabelColor
+        let status = keeper.status
+        shownStatus = status
+        setIcon(status)
+        awakeView.status = status
+        statusView.status = status
+        let display = PopoverDisplay.make(status)
+        displayButton.isEnabled = display.displayButton != .disabled
+        displayButton.isOn = display.displayButton == .on
     }
 
     private func setIcon(_ status: AwakeStatus) {

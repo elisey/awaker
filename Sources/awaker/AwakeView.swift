@@ -1,92 +1,272 @@
 import AppKit
 
-/// Lets clicks on the glyph land on the round button underneath.
-final class PassthroughImageView: NSImageView {
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+/// What the popover shows for a given state.
+struct PopoverDisplay: Equatable {
+    enum WordTone { case faint, ink }
+    enum DisplayButton { case disabled, off, on }
+
+    let mark: MarkVariant
+    let word: String
+    let wordTone: WordTone
+    let pill: String
+    let pillLook: PillLook
+    let displayButton: DisplayButton
+
+    static func make(_ status: AwakeStatus) -> PopoverDisplay {
+        switch status {
+        case .asleep:
+            PopoverDisplay(mark: .outline, word: "sleepy", wordTone: .faint,
+                           pill: "click the cup", pillLook: .outline, displayButton: .disabled)
+        case .awake:
+            PopoverDisplay(mark: .steam2, word: "awake", wordTone: .ink,
+                           pill: "screen may dim", pillLook: .ink, displayButton: .off)
+        case .awakeDisplay:
+            PopoverDisplay(mark: .steam3, word: "awake", wordTone: .ink,
+                           pill: "screen on", pillLook: .yolk, displayButton: .on)
+        }
+    }
 }
 
+/// The round awake button: a circle with the mark inside. Grows on hover, shrinks while pressed.
 final class AwakeView: NSView {
-    static let buttonRadius: CGFloat = 22
-    static let buttonCenter = NSPoint(x: AppDelegate.popoverWidth / 2, y: 48)
-    static let textTop: CGFloat = 78
+    static let hoverScale: CGFloat = 1.04
+    static let pressScale: CGFloat = 0.96
+    static let scaleDuration: TimeInterval = 0.12
+    static let focusGap: CGFloat = 3
+    static let focusWidth: CGFloat = 2
+    /// Room around the circle for the hover growth and the focus ring.
+    static let margin: CGFloat = 8
 
-    let keeper: Keeper
+    /// The view's frame in the popover: the circle at its design place plus the margin.
+    static var popoverFrame: NSRect {
+        let size = Theme.Metrics.buttonSize
+        let circle = NSRect(x: (Theme.Metrics.popoverWidth - size) / 2, y: Theme.Metrics.buttonTop,
+                            width: size, height: size)
+        return circle.insetBy(dx: -margin, dy: -margin)
+    }
+
+    var status: AwakeStatus = .asleep {
+        didSet {
+            guard status != oldValue else { return }
+            needsDisplay = true
+            NSAccessibility.post(element: self, notification: .valueChanged)
+        }
+    }
     var onToggle: (() -> Void)?
 
+    private var hovering = false
     private var pressed = false
-    private let glyph: PassthroughImageView
-
-    init(frame: NSRect, keeper: Keeper) {
-        self.keeper = keeper
-        let c = Self.buttonCenter
-        glyph = PassthroughImageView(frame: NSRect(x: c.x - 14, y: c.y - 14, width: 28, height: 28))
-        super.init(frame: frame)
-        addSubview(glyph)
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) is not supported")
-    }
+    /// A click that started on the circle is in progress.
+    private var tracking = false
+    private var scale: CGFloat = 1
+    private var scaleFrom: CGFloat = 1
+    private var scaleTo: CGFloat = 1
+    private var scaleStart = Date.distantPast
+    private var scaleTimer: Timer?
 
     override var isFlipped: Bool { true }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    func refresh() {
-        glyph.image = symbolImage(keeper.status.symbol, pointSize: 20)
-        glyph.contentTintColor = keeper.awake ? .white : .systemBlue
-        needsDisplay = true
-    }
+    private var radius: CGFloat { Theme.Metrics.buttonSize / 2 }
+
+    private var center: NSPoint { NSPoint(x: bounds.midX, y: bounds.midY) }
+
+    private var awake: Bool { status != .asleep }
+
+    // MARK: Drawing
 
     override func draw(_ dirtyRect: NSRect) {
-        let c = Self.buttonCenter, r = Self.buttonRadius
-        let circle = NSBezierPath(ovalIn: NSRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r))
-        let blue = NSColor.systemBlue
-        if keeper.awake {
-            (pressed ? blue.shadow(withLevel: 0.15) ?? blue : blue).setFill()
-            circle.fill()
+        let r = radius * scale
+        let circle = NSRect(x: center.x - r, y: center.y - r, width: 2 * r, height: 2 * r)
+        fillColor.setFill()
+        NSBezierPath(ovalIn: circle).fill()
+
+        let markHeight = Theme.Metrics.buttonMark * scale
+        let markBox = NSRect(x: center.x - markHeight / 2, y: center.y - markHeight / 2,
+                             width: markHeight, height: markHeight)
+        let display = PopoverDisplay.make(status)
+        if awake {
+            drawMark(in: markBox, variant: display.mark, body: Theme.onButton, steam: Theme.steamOnButton)
         } else {
-            if pressed {
-                blue.withAlphaComponent(0.15).setFill()
-                circle.fill()
-            }
-            blue.setStroke()
-            circle.lineWidth = 2
-            circle.stroke()
+            drawMark(in: markBox, variant: display.mark, body: Theme.ink, steam: Theme.ink)
         }
 
-        let (main, sub) = keeper.labels
-        let top = Self.textTop
-        drawCentered(
-            main,
-            in: NSRect(x: 0, y: top, width: bounds.width, height: 20),
-            font: .systemFont(ofSize: 15, weight: .medium),
-            color: .labelColor
-        )
-        drawCentered(
-            sub,
-            in: NSRect(x: 0, y: top + 22, width: bounds.width, height: 16),
-            font: .systemFont(ofSize: 11),
-            color: .secondaryLabelColor
-        )
+        if focused {
+            let ringRadius = r + Self.focusGap + Self.focusWidth / 2
+            let ring = NSBezierPath(ovalIn: NSRect(x: center.x - ringRadius, y: center.y - ringRadius,
+                                                   width: 2 * ringRadius, height: 2 * ringRadius))
+            ring.lineWidth = Self.focusWidth
+            Theme.ink.setStroke()
+            ring.stroke()
+        }
     }
+
+    private var fillColor: NSColor {
+        switch (awake, pressed) {
+        case (false, false): Theme.paperDeep
+        case (false, true): Theme.hairline
+        case (true, false): Theme.button
+        case (true, true): Theme.button.blended(withFraction: 0.1, of: .black) ?? Theme.button
+        }
+    }
+
+    // MARK: Scale animation
+
+    private func updateScale() {
+        let target = pressed ? Self.pressScale : hovering ? Self.hoverScale : 1
+        guard target != scaleTo else { return }
+        scaleFrom = scale
+        scaleTo = target
+        scaleStart = Date()
+        guard scaleTimer == nil else { return }
+        let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in self?.stepScale() }
+        RunLoop.main.add(timer, forMode: .common)
+        scaleTimer = timer
+    }
+
+    private func stepScale() {
+        let t = min(1, Date().timeIntervalSince(scaleStart) / Self.scaleDuration)
+        let eased = 1 - (1 - t) * (1 - t)
+        scale = scaleFrom + (scaleTo - scaleFrom) * CGFloat(eased)
+        needsDisplay = true
+        if t >= 1 {
+            scaleTimer?.invalidate()
+            scaleTimer = nil
+        }
+    }
+
+    // MARK: Mouse
 
     private func hitsButton(_ event: NSEvent) -> Bool {
         let p = convert(event.locationInWindow, from: nil)
-        let c = Self.buttonCenter, r = Self.buttonRadius
+        let c = center, r = radius
         return (p.x - c.x) * (p.x - c.x) + (p.y - c.y) * (p.y - c.y) <= r * r
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        for area in trackingAreas { removeTrackingArea(area) }
+        addTrackingArea(NSTrackingArea(
+            rect: bounds,
+            options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self
+        ))
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        updateHover(hitsButton(event))
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        updateHover(false)
+    }
+
+    private func updateHover(_ over: Bool) {
+        if over { NSCursor.pointingHand.set() } else if hovering { NSCursor.arrow.set() }
+        guard over != hovering else { return }
+        hovering = over
+        updateScale()
     }
 
     override func mouseDown(with event: NSEvent) {
         guard hitsButton(event) else { return }
-        pressed = true
-        needsDisplay = true
+        tracking = true
+        setPressed(true)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        // Like a regular button: dragging off the circle releases it, dragging back presses it again.
+        guard tracking else { return }
+        let inside = hitsButton(event)
+        if inside != pressed { setPressed(inside) }
     }
 
     override func mouseUp(with event: NSEvent) {
-        guard pressed else { return }
-        pressed = false
+        guard tracking else { return }
+        tracking = false
+        setPressed(false)
         if hitsButton(event) { onToggle?() }
+    }
+
+    private func setPressed(_ value: Bool) {
+        guard value != pressed else { return }
+        pressed = value
         needsDisplay = true
+        updateScale()
+    }
+
+    // MARK: Keyboard and focus
+
+    /// Like NSButton: reachable with Tab only when keyboard navigation is on in System Settings.
+    override var acceptsFirstResponder: Bool { NSApp.isFullKeyboardAccessEnabled }
+
+    override func becomeFirstResponder() -> Bool {
+        needsDisplay = true
+        return super.becomeFirstResponder()
+    }
+
+    override func resignFirstResponder() -> Bool {
+        needsDisplay = true
+        return super.resignFirstResponder()
+    }
+
+    private var focused: Bool {
+        window?.firstResponder === self && window?.isKeyWindow == true
+    }
+
+    override func keyDown(with event: NSEvent) {
+        // Space and Return press the button, as they do for NSButton.
+        if event.charactersIgnoringModifiers == " " || event.keyCode == 36 || event.keyCode == 76 {
+            onToggle?()
+        } else {
+            super.keyDown(with: event)
+        }
+    }
+
+    // MARK: Accessibility
+
+    override func isAccessibilityElement() -> Bool { true }
+
+    override func accessibilityRole() -> NSAccessibility.Role? { .button }
+
+    override func accessibilityLabel() -> String? {
+        awake ? "Let the Mac sleep" : "Stay awake"
+    }
+
+    override func accessibilityValue() -> Any? {
+        awake ? "on" : "off"
+    }
+
+    override func accessibilityFrame() -> NSRect {
+        let r = radius
+        let circle = NSRect(x: center.x - r, y: center.y - r, width: 2 * r, height: 2 * r)
+        guard let window else { return .zero }
+        return window.convertToScreen(convert(circle, to: nil))
+    }
+
+    override func accessibilityPerformPress() -> Bool {
+        onToggle?()
+        return true
+    }
+}
+
+/// The state word and the status pill under the button.
+final class StatusView: NSView {
+    var status: AwakeStatus = .asleep {
+        didSet { if status != oldValue { needsDisplay = true } }
+    }
+
+    override var isFlipped: Bool { true }
+
+    /// Clicks go through to the popover; the text is not a control.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let display = PopoverDisplay.make(status)
+        let wordColor = display.wordTone == .ink ? Theme.ink : Theme.inkFaint
+        drawCentered(Theme.state.string(display.word, color: wordColor),
+                     top: Theme.Metrics.stateTop, lineHeight: Theme.Metrics.stateLineHeight, in: bounds)
+        drawPill(display.pill, look: display.pillLook, top: Theme.Metrics.pillTop, in: bounds)
     }
 }
