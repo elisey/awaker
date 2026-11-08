@@ -37,35 +37,43 @@ private let fontURL = URL(fileURLWithPath: #filePath)
     @Test func steamColumnsPerVariant() {
         #expect(Mark.steamColumns(.outline).isEmpty)
         #expect(Mark.steamColumns(.steam2) == [
-            NSRect(x: 33, y: 10, width: 12, height: 28), NSRect(x: 51, y: 10, width: 12, height: 28),
+            NSRect(x: 31, y: 17, width: 11, height: 25), NSRect(x: 48, y: 17, width: 11, height: 25),
         ])
         #expect(Mark.steamColumns(.steam3) == [
-            NSRect(x: 24, y: 10, width: 12, height: 28),
-            NSRect(x: 42, y: 0, width: 12, height: 38),
-            NSRect(x: 60, y: 10, width: 12, height: 28),
+            NSRect(x: 22.5, y: 17, width: 11, height: 25),
+            NSRect(x: 39.5, y: 9.5, width: 11, height: 32.5),
+            NSRect(x: 56.5, y: 17, width: 11, height: 25),
         ])
+        // Every column ends on the same line above the body.
+        for column in Mark.steamColumns(.steam2) + Mark.steamColumns(.steam3) {
+            #expect(column.maxY == 42)
+        }
     }
 
     @Test func markShapesMatchTheGrid() {
         let body = Mark.body().bounds
-        #expect(abs(body.minX - 12) < 0.01 && abs(body.maxX - 84) < 0.01)
-        #expect(abs(body.minY - 48) < 0.01 && abs(body.maxY - 120) < 0.01)
-        let outline = Mark.outline().bounds
-        #expect(abs(outline.minX - 16.5) < 0.01 && abs(outline.maxX - 79.5) < 0.01)
-        #expect(abs(outline.minY - 52.5) < 0.01 && abs(outline.maxY - 115.5) < 0.01)
-        // The handle bulges to the right of the body, from y 63 to 97.
+        #expect(abs(body.minX - 7.5) < 0.01 && abs(body.maxX - 82.5) < 0.01)
+        #expect(abs(body.minY - 50) < 0.01 && abs(body.maxY - 105) < 0.01)
+        let outline = Mark.outline(inset: 5).bounds
+        #expect(abs(outline.minX - 12.5) < 0.01 && abs(outline.maxX - 77.5) < 0.01)
+        #expect(abs(outline.minY - 55) < 0.01 && abs(outline.maxY - 100) < 0.01)
+        // The handle bulges to the right of the body, from y 56.5 to 89.5.
         let handle = Mark.handle().bounds
-        #expect(abs(handle.minX - 84) < 0.01 && abs(handle.maxX - 101) < 0.01)
-        #expect(abs(handle.minY - 63) < 0.01 && abs(handle.maxY - 97) < 0.01)
+        #expect(abs(handle.minX - 82.5) < 0.01 && abs(handle.maxX - 99) < 0.01)
+        #expect(abs(handle.minY - 56.5) < 0.01 && abs(handle.maxY - 89.5) < 0.01)
+    }
+
+    @Test func opticalCenterIsTheCenterOfTheOpticalFrame() {
+        // The optical frame from BRAND.md: x -2.5…104.5, y 9.5…122.5.
+        let frame = NSRect(x: -2.5, y: 9.5, width: 107, height: 113)
+        #expect(Mark.opticalCenter == NSPoint(x: frame.midX, y: frame.midY))
+        #expect(Mark.opticalHeight == frame.height)
     }
 
     @Test func markIsPlacedByItsOpticalCenter() {
         let t = Mark.transform(center: NSPoint(x: 100, y: 50), scale: 0.5)
         #expect(t.transform(Mark.opticalCenter) == NSPoint(x: 100, y: 50))
-        #expect(t.transform(NSPoint(x: 63, y: 80)) == NSPoint(x: 105, y: 55))
-        // The menu bar grid: translate(2.375, 0.25) scale(0.125) from the SVGs.
-        let menubar = Mark.transform(center: NSPoint(x: 9, y: 9), scale: 0.125)
-        #expect(menubar.transform(NSPoint(x: 0, y: 0)) == NSPoint(x: 2.375, y: 0.25))
+        #expect(t.transform(NSPoint(x: 61, y: 76)) == NSPoint(x: 105, y: 55))
     }
 
     @Test func iconButtonDimsWhenDisabled() {

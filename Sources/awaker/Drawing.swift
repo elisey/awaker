@@ -28,40 +28,43 @@ extension AwakeStatus {
     }
 }
 
-/// The mark's geometry on its 120 grid (y down), see docs/redesign/assets/awaker-mark.svg.
+/// The mark's geometry on the BC2 grid (y down; the 22 pt menu bar icon is this grid × 0.2),
+/// see docs/redesign/assets/awaker-mark.svg.
 enum Mark {
     /// The mark is centered on this point, not on its bounding box: the body's weight
-    /// sits low and left, so box-centering looks off.
-    static let opticalCenter = NSPoint(x: 53, y: 70)
-    /// The frame around the optical center the mark is fitted into.
-    static let opticalHeight: CGFloat = 140
-    static let moduleWidth: CGFloat = 12
+    /// sits low, so box-centering looks off.
+    static let opticalCenter = NSPoint(x: 51, y: 66)
+    /// The frame around the optical center the mark is fitted into (107×113).
+    static let opticalHeight: CGFloat = 113
+    static let moduleWidth: CGFloat = 11
 
-    /// Body: 72×72, corners 4 at the top and 26 at the bottom.
+    /// Body: 75×55, corners 4 at the top and 22.5 at the bottom.
     static func body() -> NSBezierPath {
         let path = NSBezierPath()
-        path.move(to: NSPoint(x: 16, y: 48))
-        path.line(to: NSPoint(x: 80, y: 48))
-        path.appendArc(withCenter: NSPoint(x: 80, y: 52), radius: 4, startAngle: 270, endAngle: 360)
-        path.line(to: NSPoint(x: 84, y: 94))
-        path.appendArc(withCenter: NSPoint(x: 58, y: 94), radius: 26, startAngle: 0, endAngle: 90)
-        path.line(to: NSPoint(x: 38, y: 120))
-        path.appendArc(withCenter: NSPoint(x: 38, y: 94), radius: 26, startAngle: 90, endAngle: 180)
-        path.line(to: NSPoint(x: 12, y: 52))
-        path.appendArc(withCenter: NSPoint(x: 16, y: 52), radius: 4, startAngle: 180, endAngle: 270)
+        path.move(to: NSPoint(x: 11.5, y: 50))
+        path.line(to: NSPoint(x: 78.5, y: 50))
+        path.appendArc(withCenter: NSPoint(x: 78.5, y: 54), radius: 4, startAngle: 270, endAngle: 360)
+        path.line(to: NSPoint(x: 82.5, y: 82.5))
+        path.appendArc(withCenter: NSPoint(x: 60, y: 82.5), radius: 22.5, startAngle: 0, endAngle: 90)
+        path.line(to: NSPoint(x: 30, y: 105))
+        path.appendArc(withCenter: NSPoint(x: 30, y: 82.5), radius: 22.5, startAngle: 90, endAngle: 180)
+        path.line(to: NSPoint(x: 7.5, y: 54))
+        path.appendArc(withCenter: NSPoint(x: 11.5, y: 54), radius: 4, startAngle: 180, endAngle: 270)
         path.close()
         return path
     }
 
-    /// The body inset by 4.5, meant to be stroked: the cup without steam.
-    static func outline() -> NSBezierPath {
+    /// The body inset by `inset`, meant to be stroked: the cup without steam. The top corners
+    /// are square, the bottom ones keep the body's arc centers.
+    static func outline(inset: CGFloat) -> NSBezierPath {
+        let radius = 22.5 - inset
         let path = NSBezierPath()
-        path.move(to: NSPoint(x: 16.5, y: 52.5))
-        path.line(to: NSPoint(x: 79.5, y: 52.5))
-        path.line(to: NSPoint(x: 79.5, y: 94))
-        path.appendArc(withCenter: NSPoint(x: 58, y: 94), radius: 21.5, startAngle: 0, endAngle: 90)
-        path.line(to: NSPoint(x: 38, y: 115.5))
-        path.appendArc(withCenter: NSPoint(x: 38, y: 94), radius: 21.5, startAngle: 90, endAngle: 180)
+        path.move(to: NSPoint(x: 7.5 + inset, y: 50 + inset))
+        path.line(to: NSPoint(x: 82.5 - inset, y: 50 + inset))
+        path.line(to: NSPoint(x: 82.5 - inset, y: 82.5))
+        path.appendArc(withCenter: NSPoint(x: 60, y: 82.5), radius: radius, startAngle: 0, endAngle: 90)
+        path.line(to: NSPoint(x: 30, y: 105 - inset))
+        path.appendArc(withCenter: NSPoint(x: 30, y: 82.5), radius: radius, startAngle: 90, endAngle: 180)
         path.close()
         path.lineJoinStyle = .round
         return path
@@ -70,27 +73,27 @@ enum Mark {
     /// Handle: a half circle on the right, meant to be stroked; its butt ends hide in the body.
     static func handle() -> NSBezierPath {
         let path = NSBezierPath()
-        path.appendArc(withCenter: NSPoint(x: 84, y: 80), radius: 17, startAngle: 270, endAngle: 90 + 360)
+        path.appendArc(withCenter: NSPoint(x: 82.5, y: 73), radius: 16.5, startAngle: 270, endAngle: 90 + 360)
         return path
     }
 
-    /// Steam columns as (x, y, height); every column is 12 wide with round ends.
+    /// Steam columns as (x, y, height); every column is 11 wide with round ends, all end at y 42.
     static func steamColumns(_ variant: MarkVariant) -> [NSRect] {
         switch variant {
         case .outline:
             return []
         case .steam2:
-            return [NSRect(x: 33, y: 10, width: 12, height: 28), NSRect(x: 51, y: 10, width: 12, height: 28)]
+            return [NSRect(x: 31, y: 17, width: 11, height: 25), NSRect(x: 48, y: 17, width: 11, height: 25)]
         case .steam3:
             return [
-                NSRect(x: 24, y: 10, width: 12, height: 28),
-                NSRect(x: 42, y: 0, width: 12, height: 38),
-                NSRect(x: 60, y: 10, width: 12, height: 28),
+                NSRect(x: 22.5, y: 17, width: 11, height: 25),
+                NSRect(x: 39.5, y: 9.5, width: 11, height: 32.5),
+                NSRect(x: 56.5, y: 17, width: 11, height: 25),
             ]
         }
     }
 
-    /// Maps the 120 grid into a flipped context: `scale` per grid unit, optical center at `center`.
+    /// Maps the grid into a flipped context: `scale` per grid unit, optical center at `center`.
     static func transform(center: NSPoint, scale: CGFloat) -> AffineTransform {
         var t = AffineTransform(translationByX: center.x, byY: center.y)
         t.scale(scale)
@@ -99,14 +102,14 @@ enum Mark {
     }
 }
 
-/// Draws the mark into a flipped context with the optical frame (108×140) fitted into
+/// Draws the mark into a flipped context with the optical frame (107×113) fitted into
 /// `box`'s height and the optical center on `box`'s center.
 func drawMark(
     in box: NSRect,
     variant: MarkVariant,
     body: NSColor,
     steam: NSColor,
-    outlineWidth: CGFloat = 9,
+    outlineWidth: CGFloat = 10,
     steamLift: [CGFloat] = []
 ) {
     let scale = box.height / Mark.opticalHeight
@@ -115,15 +118,17 @@ func drawMark(
 }
 
 /// Draws the mark into a flipped context, `scale` points per grid unit, optical center at `center`.
-/// `handleWidth` is the handle's stroke on the filled variants; `steamLift` raises each steam
-/// column by that many grid units.
+/// `handleWidth` is the handle's stroke on the filled variants. On the outline the handle is
+/// `outlineHandleWidth`, by default a little thicker than the body's line, which otherwise makes
+/// the handle look thinner. `steamLift` raises each steam column by that many grid units.
 func drawMark(
     center: NSPoint,
     scale: CGFloat,
     variant: MarkVariant,
     body: NSColor,
     steam: NSColor,
-    outlineWidth: CGFloat = 9,
+    outlineWidth: CGFloat = 10,
+    outlineHandleWidth: CGFloat? = nil,
     handleWidth: CGFloat = Mark.moduleWidth,
     steamLift: [CGFloat] = []
 ) {
@@ -144,10 +149,10 @@ func drawMark(
     let handle = placed(Mark.handle())
     body.set()
     if variant == .outline {
-        let outline = placed(Mark.outline())
+        let outline = placed(Mark.outline(inset: outlineWidth / 2))
         outline.lineWidth = outlineWidth * scale
         outline.stroke()
-        handle.lineWidth = outlineWidth * scale
+        handle.lineWidth = (outlineHandleWidth ?? outlineWidth + 0.5) * scale
     } else {
         placed(Mark.body()).fill()
         handle.lineWidth = handleWidth * scale
