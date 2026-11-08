@@ -8,8 +8,8 @@ let canvas: CGFloat = 1024
 let shapeRect = CGRect(x: 100, y: 100, width: 824, height: 824)
 // radius-icon: 23% of the tile.
 let shapeRadius: CGFloat = 824 * 0.23
-// The cup with its steam (120 grid units) is 63% of the tile.
-let markScale: CGFloat = 824 * 0.63 / 120
+// The mark is about 60% of the tile's width: 1.12 grid units per point on the 180 design tile.
+let markScale: CGFloat = 1.12 * 824 / 180
 
 func rgb(_ value: UInt32) -> NSColor {
     NSColor(srgbRed: CGFloat((value >> 16) & 0xFF) / 255, green: CGFloat((value >> 8) & 0xFF) / 255,
@@ -22,35 +22,36 @@ let yolk = rgb(0xFFC21A)
 
 // MARK: - The mark
 // A copy of Mark in Sources/awaker/Drawing.swift: a script cannot import the app's module.
-// Paths are built on the 120 grid with y down.
+// Paths are built on the BC2 grid with y down.
 
-let opticalCenter = CGPoint(x: 53, y: 70)
+let opticalCenter = CGPoint(x: 51, y: 66)
+let moduleWidth: CGFloat = 11
 
 func body() -> NSBezierPath {
     let path = NSBezierPath()
-    path.move(to: CGPoint(x: 16, y: 48))
-    path.line(to: CGPoint(x: 80, y: 48))
-    path.appendArc(withCenter: CGPoint(x: 80, y: 52), radius: 4, startAngle: 270, endAngle: 360)
-    path.line(to: CGPoint(x: 84, y: 94))
-    path.appendArc(withCenter: CGPoint(x: 58, y: 94), radius: 26, startAngle: 0, endAngle: 90)
-    path.line(to: CGPoint(x: 38, y: 120))
-    path.appendArc(withCenter: CGPoint(x: 38, y: 94), radius: 26, startAngle: 90, endAngle: 180)
-    path.line(to: CGPoint(x: 12, y: 52))
-    path.appendArc(withCenter: CGPoint(x: 16, y: 52), radius: 4, startAngle: 180, endAngle: 270)
+    path.move(to: CGPoint(x: 11.5, y: 50))
+    path.line(to: CGPoint(x: 78.5, y: 50))
+    path.appendArc(withCenter: CGPoint(x: 78.5, y: 54), radius: 4, startAngle: 270, endAngle: 360)
+    path.line(to: CGPoint(x: 82.5, y: 82.5))
+    path.appendArc(withCenter: CGPoint(x: 60, y: 82.5), radius: 22.5, startAngle: 0, endAngle: 90)
+    path.line(to: CGPoint(x: 30, y: 105))
+    path.appendArc(withCenter: CGPoint(x: 30, y: 82.5), radius: 22.5, startAngle: 90, endAngle: 180)
+    path.line(to: CGPoint(x: 7.5, y: 54))
+    path.appendArc(withCenter: CGPoint(x: 11.5, y: 54), radius: 4, startAngle: 180, endAngle: 270)
     path.close()
     return path
 }
 
 func handle() -> NSBezierPath {
     let path = NSBezierPath()
-    path.appendArc(withCenter: CGPoint(x: 84, y: 80), radius: 17, startAngle: 270, endAngle: 450)
+    path.appendArc(withCenter: CGPoint(x: 82.5, y: 73), radius: 16.5, startAngle: 270, endAngle: 450)
     return path
 }
 
 let steamColumns = [
-    CGRect(x: 24, y: 10, width: 12, height: 28),
-    CGRect(x: 42, y: 0, width: 12, height: 38),
-    CGRect(x: 60, y: 10, width: 12, height: 28),
+    CGRect(x: 22.5, y: 17, width: 11, height: 25),
+    CGRect(x: 39.5, y: 9.5, width: 11, height: 32.5),
+    CGRect(x: 56.5, y: 17, width: 11, height: 25),
 ]
 
 /// The canvas is not flipped, so the grid's y axis is mirrored on the way in.
@@ -72,12 +73,12 @@ func drawIcon() {
     }
     yolk.setFill()
     for column in steamColumns {
-        placed(NSBezierPath(roundedRect: column, xRadius: 6, yRadius: 6)).fill()
+        placed(NSBezierPath(roundedRect: column, xRadius: moduleWidth / 2, yRadius: moduleWidth / 2)).fill()
     }
     cream.set()
     placed(body()).fill()
     let arc = placed(handle())
-    arc.lineWidth = 12 * markScale
+    arc.lineWidth = moduleWidth * markScale
     arc.stroke()
 }
 
