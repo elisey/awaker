@@ -59,7 +59,7 @@ enum Theme {
         static let iconButton: CGFloat = 24
         static let iconInset: CGFloat = 12
         static let iconRadius: CGFloat = 8
-        static let menubarIcon: CGFloat = 18
+        static let menubarIcon: CGFloat = 22
         static let disabledOpacity: CGFloat = 0.4
     }
 

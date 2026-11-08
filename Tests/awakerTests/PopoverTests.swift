@@ -74,6 +74,12 @@ private let fontURL = URL(fileURLWithPath: #filePath)
         let t = Mark.transform(center: NSPoint(x: 100, y: 50), scale: 0.5)
         #expect(t.transform(Mark.opticalCenter) == NSPoint(x: 100, y: 50))
         #expect(t.transform(NSPoint(x: 61, y: 76)) == NSPoint(x: 105, y: 55))
+        // The menu bar grid: translate(0, 0) scale(0.2) from the SVGs.
+        let menubar = Mark.transform(center: MenuBarIcon.center, scale: MenuBarIcon.scale)
+        let origin = menubar.transform(NSPoint(x: 0, y: 0))
+        #expect(abs(origin.x) < 0.0001 && abs(origin.y) < 0.0001)
+        let corner = menubar.transform(NSPoint(x: 110, y: 110))
+        #expect(abs(corner.x - 22) < 0.0001 && abs(corner.y - 22) < 0.0001)
     }
 
     @Test func iconButtonDimsWhenDisabled() {

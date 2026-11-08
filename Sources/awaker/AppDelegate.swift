@@ -14,7 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         Theme.registerFonts()
         // A fixed-width item keeps the anchored popover from moving when the icon changes.
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: Theme.Metrics.menubarIcon)
         if let button = statusItem.button {
             button.target = self
             button.action = #selector(togglePopover(_:))

@@ -51,7 +51,7 @@ struct MenuBarIconTests {
         for status in [AwakeStatus.asleep, .awake, .awakeDisplay] {
             let image = MenuBarIcon.image(for: status)
             #expect(image.isTemplate)
-            #expect(image.size == NSSize(width: 18, height: 18))
+            #expect(image.size == NSSize(width: 22, height: 22))
         }
     }
 

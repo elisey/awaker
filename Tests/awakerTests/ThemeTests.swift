@@ -56,7 +56,7 @@ private func axisValue(_ font: NSFont, _ tag: Int) -> Double? {
             (M.popoverWidth, 208), (M.popoverHeight, 208), (M.buttonSize, 88), (M.buttonTop, 22),
             (M.buttonMark, 58), (M.stateTop, 124), (M.stateLineHeight, 36), (M.pillTop, 170),
             (M.pillHeight, 24), (M.pillPadding, 12), (M.pillMaxWidth, 160), (M.iconButton, 24),
-            (M.iconInset, 12), (M.iconRadius, 8), (M.menubarIcon, 18), (M.disabledOpacity, 0.4),
+            (M.iconInset, 12), (M.iconRadius, 8), (M.menubarIcon, 22), (M.disabledOpacity, 0.4),
         ]
         for (value, design) in expected {
             #expect(value == design)

@@ -1,19 +1,21 @@
 import AppKit
 
-/// The status item: the mark as an 18×18 template image (see docs/redesign/assets/menubar-*.svg).
+/// The status item: the mark as a 22×22 template image (see docs/redesign/assets/menubar-*.svg).
 /// The menu bar picks the real color.
 enum MenuBarIcon {
     static let size = NSSize(width: Theme.Metrics.menubarIcon, height: Theme.Metrics.menubarIcon)
-    /// Grid units per point: translate(2.375, 0.25) scale(0.125) puts the optical center on (9, 9).
-    static let scale: CGFloat = 0.125
-    /// Stroke widths on the 120 grid: thicker than in the popover so the mark holds at 18 pt.
-    static let outlineWidth: CGFloat = 12
-    static let handleWidth: CGFloat = 13
+    /// Points per grid unit: the BC2 grid × 0.2 is the icon itself, translate(0, 0) scale(0.2).
+    /// The mark fills the icon's height, so it is not centered optically.
+    static let scale: CGFloat = 0.2
+    static let center = NSPoint(x: Mark.opticalCenter.x * scale, y: Mark.opticalCenter.y * scale)
+    /// Outline strokes on the grid: thinner than in the popover so the small cup stays open.
+    static let outlineWidth: CGFloat = 8.5
+    static let outlineHandleWidth: CGFloat = 9
 
     static func image(for status: AwakeStatus) -> NSImage {
-        let image = NSImage(size: size, flipped: true) { bounds in
-            drawMark(center: NSPoint(x: bounds.midX, y: bounds.midY), scale: scale, variant: status.mark,
-                     body: .black, steam: .black, outlineWidth: outlineWidth, handleWidth: handleWidth)
+        let image = NSImage(size: size, flipped: true) { _ in
+            drawMark(center: center, scale: scale, variant: status.mark, body: .black, steam: .black,
+                     outlineWidth: outlineWidth, outlineHandleWidth: outlineHandleWidth)
             return true
         }
         image.isTemplate = true
