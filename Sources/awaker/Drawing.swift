@@ -78,10 +78,12 @@ enum Mark {
     }
 
     /// Steam columns as (x, y, height); every column is 11 wide with round ends, all end at y 42.
+    /// The outline cup has cold steam: two short columns, the left one taller, in the places of
+    /// `.steam2`; they hold the top of the mark so the empty cup stands as high as the others.
     static func steamColumns(_ variant: MarkVariant) -> [NSRect] {
         switch variant {
         case .outline:
-            return []
+            return [NSRect(x: 31, y: 18, width: 11, height: 24), NSRect(x: 48, y: 27, width: 11, height: 15)]
         case .steam2:
             return [NSRect(x: 31, y: 17, width: 11, height: 25), NSRect(x: 48, y: 17, width: 11, height: 25)]
         case .steam3:

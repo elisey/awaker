@@ -35,7 +35,13 @@ private let fontURL = URL(fileURLWithPath: #filePath)
     }
 
     @Test func steamColumnsPerVariant() {
-        #expect(Mark.steamColumns(.outline).isEmpty)
+        let cold = Mark.steamColumns(.outline)
+        #expect(cold == [
+            NSRect(x: 31, y: 18, width: 11, height: 24), NSRect(x: 48, y: 27, width: 11, height: 15),
+        ])
+        // Cold steam stands where the two columns of .steam2 stand, the left one taller.
+        #expect(cold.map(\.minX) == Mark.steamColumns(.steam2).map(\.minX))
+        #expect(cold[0].height > cold[1].height)
         #expect(Mark.steamColumns(.steam2) == [
             NSRect(x: 31, y: 17, width: 11, height: 25), NSRect(x: 48, y: 17, width: 11, height: 25),
         ])
@@ -45,7 +51,7 @@ private let fontURL = URL(fileURLWithPath: #filePath)
             NSRect(x: 56.5, y: 17, width: 11, height: 25),
         ])
         // Every column ends on the same line above the body.
-        for column in Mark.steamColumns(.steam2) + Mark.steamColumns(.steam3) {
+        for column in cold + Mark.steamColumns(.steam2) + Mark.steamColumns(.steam3) {
             #expect(column.maxY == 42)
         }
     }
