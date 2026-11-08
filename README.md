@@ -55,9 +55,10 @@ the SIL Open Font License 1.1: the font and its license are in `Support/Fonts`
 `Resources/Fonts`, and the app registers the font at launch. Without it (for
 example `swift run` outside the bundle) the app falls back to the system font.
 
-The mark — a cup with steam — is drawn in code from one geometry
-(`Mark` and `drawMark` in `Sources/awaker/Drawing.swift`) for the round button
-and the menu bar. The app icon is drawn by `Support/make-icon.swift`, which
+The mark — a squat cup with tall steam (variant BC2 in the design system) — is
+drawn in code from one geometry (`Mark` and `drawMark` in
+`Sources/awaker/Drawing.swift`) for the round button and the menu bar. The menu
+bar icon is a 22 pt template image that fills the height of the bar. The app icon is drawn by `Support/make-icon.swift`, which
 carries its own copy of that geometry; `make icon` regenerates
 `Support/awaker.icns` from the `ultra` variant.
 
